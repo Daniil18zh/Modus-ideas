@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Сообщить о проблеме</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    body { padding: 0; }
+    .client-page { max-width: 520px; margin: 0 auto; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand .logo { width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: var(--accent-text); display: grid; place-items: center; font-size: 20px; }
+    h1 { font-size: 22px; margin: 4px 0 0; letter-spacing: -.01em; }
+    .hp { position: absolute; left: -9999px; }
+    .status-step { display: flex; gap: 10px; align-items: center; padding: 6px 0; color: var(--hint); }
+    .status-step.on { color: var(--text); font-weight: 600; }
+    .status-step i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
+    .status-step.on i { background: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="client-page" id="root"><div class="loader">Загрузка…</div></div>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const params = new URLSearchParams(location.search);
+    const root = $('#root');
+    const store = {
+      get() { try { return JSON.parse(localStorage.getItem('myReports') || '[]'); } catch { return []; } },
+      add(item) { try { localStorage.setItem('myReports', JSON.stringify([item, ...this.get()].slice(0, 10))); } catch { /* приватный режим */ } },
+    };
+
+    async function call(path, body) {
+      const res = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Нет связи с сервером');
+      return data;
+    }
+
+    function header(company) {
+      return `<div class="brand"><div class="logo">💬</div><div><div class="small muted">${esc(company)}</div><b>Служба качества</b></div></div>`;
+    }
+
+    async function showStatus(token) {
+      try {
+        const [{ ticket: t }, meta] = await Promise.all([call('/api/public/status?t=' + encodeURIComponent(token)), call('/api/public/meta')]);
+        const steps = [['new', 'Получено'], ['discussion', 'Команда ищет решение'], ['in_progress', 'В работе'], ['review', 'Проверяем результат'], ['done', 'Решено']];
+        const idx = steps.findIndex(([s]) => s === t.status);
+        root.innerHTML = `${header(meta.company)}
+          <h1>Обращение №${t.id}</h1>
+          <div class="box"><div class="small muted">${esc(t.category || '')}</div><b>${esc(t.title)}</b></div>
+          <div class="box">${t.status === 'rejected'
+            ? '<div class="status-step on"><i></i>Обращение закрыто</div>'
+            : steps.map(([, l], i) => `<div class="status-step ${i <= idx ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>
+          ${t.resolution ? `<div class="box"><h3>Ответ компании</h3><p class="t-desc">${esc(t.resolution)}</p></div>` : ''}
+          <p class="small muted center">Обновлено: ${new Date(t.updated_at).toLocaleString('ru-RU')}</p>
+          <a class="btn plain block center" href="/c/${params.get('p') ? '?p=' + encodeURIComponent(params.get('p')) : ''}" style="text-decoration:none">Новое обращение</a>`;
+      } catch (e) {
+        root.innerHTML = `<div class="gate"><h2>Не найдено</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="/c/">Сообщить о проблеме</a></div>`;
+      }
+    }
+
+    async function showForm() {
+      let meta;
+      try { meta = await call('/api/public/meta' + (params.get('p') ? '?p=' + encodeURIComponent(params.get('p')) : '')); }
+      catch (e) { root.innerHTML = `<div class="gate"><p class="muted">${esc(e.message)}</p></div>`; return; }
+      let catId = null;
+      const mine = store.get();
+      root.innerHTML = `${header(meta.company)}
+        <h1>Что пошло не так?</h1>
+        <p class="muted" style="margin:0">Опишите проблему — её сразу увидит команда, которая отвечает за решение. Регистрация не нужна.${meta.point ? `<br><span class="small">Точка: ${esc(meta.point)}</span>` : ''}</p>
+        <div class="field"><span>Тема</span><div class="cat-grid">${meta.categories.map((c) => `<button class="cat-opt" data-cat="${c.id}">${esc(c.emoji)} ${esc(c.name)}</button>`).join('')}</div></div>
+        <label class="field"><span>Коротко о проблеме</span><input class="input" id="f-title" maxlength="140" placeholder="Например: не работает домофон в подъезде 2"></label>
+        <label class="field"><span>Подробности</span><textarea class="textarea" id="f-desc" maxlength="4000" placeholder="Адрес объекта, когда началось, что уже пробовали"></textarea></label>
+        <label class="field"><span>Как к вам обращаться (необязательно)</span><input class="input" id="f-name" maxlength="80"></label>
+        <label class="field"><span>Телефон, e-mail или Telegram для ответа (необязательно)</span><input class="input" id="f-contact" maxlength="120"></label>
+        <input class="hp" id="f-website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="small muted" style="margin:0">Отправляя форму, вы соглашаетесь, что указанные контакты будут использованы только для ответа по этому обращению.</p>
+        <button class="btn block" id="f-send">Отправить</button>
+        ${mine.length ? `<div class="box"><h3>Мои обращения</h3><div class="list">${mine.map((m) => `<a class="list-item" style="color:inherit;text-decoration:none" href="?t=${encodeURIComponent(m.token)}">
+          <span class="grow">№${m.id} · ${esc(m.title)}</span><span class="muted">→</span></a>`).join('')}</div></div>` : ''}`;
+      root.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => {
+        catId = Number(b.dataset.cat);
+        root.querySelectorAll('[data-cat]').forEach((x) => x.classList.toggle('on', x === b));
+      }));
+      $('#f-send').addEventListener('click', async (e) => {
+        if (!catId) return alert('Выберите тему обращения');
+        e.target.disabled = true;
+        try {
+          const title = $('#f-title').value;
+          const r = await call('/api/public/report', {
+            category_id: catId, title, description: $('#f-desc').value, name: $('#f-name').value,
+            contact: $('#f-contact').value, website: $('#f-website').value, p: params.get('p') || '',
+          });
+          if (!r.token) throw new Error('Попробуйте ещё раз');
+          store.add({ id: r.id, token: r.token, title });
+          const link = `${location.origin}/c/?t=${r.token}`;
+          root.innerHTML = `${header(meta.company)}<div class="gate"><div class="logo">✅</div><h2>Спасибо! Обращение №${r.id} принято</h2>
+            <p class="muted">Команда уже получила его. Сохраните ссылку, чтобы следить за статусом:</p>
+            <a class="btn" href="${link}">Открыть статус</a>
+            <p class="small muted" style="word-break:break-all">${esc(link)}</p></div>`;
+        } catch (err) {
+          alert(err.message);
+          e.target.disabled = false;
+        }
+      });
+    }
+
+    params.get('t') ? showStatus(params.get('t')) : showForm();
+  </script>
+</body>
+</html>

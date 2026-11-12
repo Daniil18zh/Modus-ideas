@@ -1,0 +1,18 @@
+{
+  "name": "modus-ideas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Модус Идеи — Telegram Mini App для обратной связи, решений и мотивации сотрудников (Cloudflare Workers + D1)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --persist-to .state",
+    "db:init": "wrangler d1 execute modus-ideas --local --persist-to .state --file=schema.sql",
+    "db:seed": "wrangler d1 execute modus-ideas --local --persist-to .state --file=seed-demo.sql",
+    "db:init:remote": "wrangler d1 execute modus-ideas --remote --file=schema.sql",
+    "db:seed:remote": "wrangler d1 execute modus-ideas --remote --file=seed-demo.sql",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

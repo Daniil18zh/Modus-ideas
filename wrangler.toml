@@ -1,0 +1,26 @@
+name = "modus-ideas"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Статика Mini App и QR-формы. Запросы, для которых нет файла (/api/*, /tg/*, /setup), попадают в Worker.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "modus-ideas"
+database_id = "d62b383c-2b93-4798-a0ea-ffe7a20aaa67"
+
+# Ежедневно в 09:00 МСК: «горящие» награды растут, просрочки уходят дайджестом в группу.
+[triggers]
+crons = ["0 6 * * *"]
+
+[vars]
+COMPANY_NAME = "Модус Трейд"
+APP_SHORT_NAME = ""   # short name Mini App из BotFather (/newapp) — для кнопок в группе
+MAIN_APP = "1"       # "1" — у бота включён главный Mini App в BotFather: кнопки в группе открывают приложение
+ADMIN_IDS = "1077136929"      # ОБЯЗАТЕЛЬНО: Telegram id администраторов через запятую (только они могут /bind и управлять)
+DEMO_MODE = "0"       # "1" — вход без Telegram под демо-пользователями (только для показа)
+
+# Секреты (wrangler secret put ...): BOT_TOKEN, WEBHOOK_SECRET

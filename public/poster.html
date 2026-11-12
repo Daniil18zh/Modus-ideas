@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QR-плакат</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; background: #eef0f3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1f2328; }
+    .poster { width: 100%; max-width: 640px; margin: 24px auto; background: #fff; border-radius: 20px; padding: 40px 32px; text-align: center; box-sizing: border-box; font-weight: 700; }
+    .company { font-size: 20px; color: #6b7280; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 16px; }
+    h1 { font-size: 34px; line-height: 1.15; margin: 14px 0 8px; }
+    p { font-size: 24px; line-height: 1.35; color: #1f2328; margin: 0 0 24px; }
+    .sign { font-size: 22px; font-style: italic; color: #4b5563; margin-top: -8px; }
+    .qr { width: 300px; max-width: 80%; margin: 0 auto; }
+    .qr svg { width: 100%; height: auto; display: block; }
+    .steps { display: flex; justify-content: center; gap: 18px; margin-top: 24px; font-size: 19px; color: #4b5563; flex-wrap: wrap; }
+    .point { margin-top: 18px; font-size: 17px; color: #6b7280; }
+    .print { display: block; margin: 0 auto 24px; padding: 12px 22px; border: 0; border-radius: 12px; background: #4a77c9; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+    @media print { body { background: #fff; } .poster { margin: 0 auto; border-radius: 0; } .print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="poster">
+    <div class="company" id="company"></div>
+    <p>Если у вас возникла проблема касаемо нашего сервиса или оборудования, напишите нам об этом, и мы обязательно найдём решение. Нам очень важна ваша обратная связь!</p>
+    <p class="sign">С уважением, компания «<span id="sign-company"></span>»</p>
+    <div class="qr" id="qr"></div>
+    <div class="steps"><span>📷 Сканируйте</span><span>✍️ Опишите</span><span>🔔 Следите за решением</span></div>
+    <div class="point" id="point"></div>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const tag = params.get('p');
+    const url = `${location.origin}/c/${tag ? '?p=' + encodeURIComponent(tag) : ''}`;
+    document.getElementById('company').textContent = params.get('company') || '';
+    document.getElementById('sign-company').textContent = params.get('company') || 'Модус Трейд';
+    document.getElementById('point').textContent = params.get('title') || '';
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+  </script>
+</body>
+</html>
